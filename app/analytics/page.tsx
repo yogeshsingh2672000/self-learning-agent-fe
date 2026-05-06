@@ -1,15 +1,15 @@
 /**
- * Dashboard page - protected route
+ * Analytics page - Phase 5+ functionality
  */
 import ProtectedRoute from "@/components/ProtectedRoute";
 import MainLayout from "@/components/MainLayout";
-import Dashboard from "@/components/pages/Dashboard";
+import AnalyticsContent from "@/components/pages/AnalyticsContent";
 
-export default function Home() {
+export default function AnalyticsPage() {
   return (
     <ProtectedRoute>
       <MainLayout>
-        <Dashboard />
+        <AnalyticsContent />
       </MainLayout>
     </ProtectedRoute>
   );

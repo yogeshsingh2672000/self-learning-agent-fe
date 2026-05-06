@@ -1,15 +1,15 @@
 /**
- * Dashboard page - protected route
+ * Tasks page - Phase 3 functionality
  */
 import ProtectedRoute from "@/components/ProtectedRoute";
 import MainLayout from "@/components/MainLayout";
-import Dashboard from "@/components/pages/Dashboard";
+import TasksContent from "@/components/pages/TasksContent";
 
-export default function Home() {
+export default function TasksPage() {
   return (
     <ProtectedRoute>
       <MainLayout>
-        <Dashboard />
+        <TasksContent />
       </MainLayout>
     </ProtectedRoute>
   );

@@ -1,15 +1,15 @@
 /**
- * Dashboard page - protected route
+ * Chat page - Phase 2 functionality
  */
 import ProtectedRoute from "@/components/ProtectedRoute";
 import MainLayout from "@/components/MainLayout";
-import Dashboard from "@/components/pages/Dashboard";
+import ChatContent from "@/components/pages/ChatContent";
 
-export default function Home() {
+export default function ChatPage() {
   return (
     <ProtectedRoute>
       <MainLayout>
-        <Dashboard />
+        <ChatContent />
       </MainLayout>
     </ProtectedRoute>
   );
