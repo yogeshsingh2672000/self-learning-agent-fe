@@ -9,10 +9,9 @@ const TOKEN_TYPE = "bearer";
 export const authUtils = {
   setToken: (token: string) => {
     Cookies.set(TOKEN_KEY, token, {
-      httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "Lax",
-      maxAge: 60 * 60, // 1 hour
+      expires: 1 / 24, // 1 hour (js-cookie uses days)
     });
   },
 
