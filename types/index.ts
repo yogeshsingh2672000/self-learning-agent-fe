@@ -37,6 +37,7 @@ export enum TaskStatus {
   IN_DEVELOPMENT = "in_development",
   TESTING = "testing",
   IN_REVIEW = "in_review",
+  PENDING_DEPLOYMENT = "pending_deployment",
   DEPLOYED = "deployed",
   REJECTED = "rejected",
   ESCALATED = "escalated",

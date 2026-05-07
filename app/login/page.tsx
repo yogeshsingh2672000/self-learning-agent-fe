@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useAuthStore } from "@/store/auth-store";
 import { authApi } from "@/api";
 import { AlertCircle, CheckCircle } from "lucide-react";
+import { authUtils } from "@/lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
