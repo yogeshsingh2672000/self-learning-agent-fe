@@ -239,12 +239,12 @@ export function AuditTrailPanel() {
             placeholder="Search by action..."
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
+            className="text-black flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
           />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+            className="text-black px-3 py-2 border border-gray-300 rounded-md text-sm"
           >
             <option value="all">All Status</option>
             <option value="success">Success</option>
