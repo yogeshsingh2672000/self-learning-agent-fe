@@ -75,6 +75,13 @@ export const tasksApi = {
     return response.data;
   },
 
+  retriggerTask: async (taskId: string): Promise<{ retriggered: boolean; task_id: string; status: string }> => {
+    const response = await apiClient.post<{ retriggered: boolean; task_id: string; status: string }>(
+      `/api/tasks/${taskId}/retrigger`
+    );
+    return response.data;
+  },
+
   processTask: async (
     taskId: string
   ): Promise<{ processed: boolean; is_duplicate: boolean; duplicate_id?: string; task: Task }> => {

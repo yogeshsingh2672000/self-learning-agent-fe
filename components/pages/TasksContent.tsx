@@ -423,6 +423,7 @@ interface DetailPanelProps {
   onReject: (id: string, comment: string) => Promise<void>;
   onVote: (id: string) => Promise<void>;
   onProcess: (id: string) => Promise<void>;
+  onRetrigger: (id: string) => Promise<void>;
   actionLoading: string | null;
 }
 
@@ -433,11 +434,16 @@ function TaskDetailPanel({
   onReject,
   onVote,
   onProcess,
+  onRetrigger,
   actionLoading,
 }: DetailPanelProps) {
   const [comment, setComment] = useState("");
   const isPending = task.status === TaskStatus.PENDING_APPROVAL;
   const isRejected = task.status === TaskStatus.REJECTED;
+  const isRetriggerable =
+    task.status === TaskStatus.APPROVED ||
+    task.status === TaskStatus.IN_DEVELOPMENT ||
+    task.status === TaskStatus.ESCALATED;
   const loading = actionLoading === task.id;
 
   // Parse acceptance criteria
@@ -682,6 +688,23 @@ function TaskDetailPanel({
                 Reject
               </button>
             )}
+
+            {/* Re-trigger */}
+            {isRetriggerable && (
+              <button
+                onClick={() => onRetrigger(task.id)}
+                disabled={!!actionLoading}
+                className="flex items-center gap-1 px-3 py-2 text-sm border border-orange-300 text-orange-700 rounded hover:bg-orange-50 disabled:opacity-50"
+                title="Re-send to Celery if the task got stuck"
+              >
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
+                Re-trigger
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -793,6 +816,19 @@ export default function TasksContent() {
       }
     } catch {
       setError("Failed to run AI enrichment.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Re-trigger Celery for stuck approved/in_development tasks
+  const handleRetrigger = async (id: string) => {
+    setActionLoading(id);
+    try {
+      await tasksApi.retriggerTask(id);
+      flash("Task re-triggered — Celery will pick it up shortly.");
+    } catch {
+      setError("Failed to re-trigger task.");
     } finally {
       setActionLoading(null);
     }
@@ -1072,6 +1108,24 @@ export default function TasksContent() {
                           </button>
                         )}
 
+                        {/* Re-trigger (for stuck approved/in_development tasks) */}
+                        {(task.status === TaskStatus.APPROVED ||
+                          task.status === TaskStatus.IN_DEVELOPMENT ||
+                          task.status === TaskStatus.ESCALATED) && (
+                          <button
+                            title="Re-trigger Celery"
+                            disabled={!!actionLoading}
+                            onClick={() => handleRetrigger(task.id)}
+                            className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded disabled:opacity-40"
+                          >
+                            {loading ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="w-4 h-4" />
+                            )}
+                          </button>
+                        )}
+
                         {/* Open detail */}
                         <button
                           title="View details"
@@ -1104,6 +1158,7 @@ export default function TasksContent() {
           onReject={handleReject}
           onVote={handleVote}
           onProcess={handleProcess}
+          onRetrigger={handleRetrigger}
           actionLoading={actionLoading}
         />
       )}
