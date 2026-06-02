@@ -13,8 +13,9 @@ import {
   Trash2,
   ChevronUp,
 } from "lucide-react";
-import { chatApi, ChatMessage, tasksApi } from "@/api";
+import { chatApi, ChatMessage, tasksApi, ServiceMode } from "@/api";
 import { useAuthStore } from "@/store/auth-store";
+import ServiceModeBanner from "@/components/ServiceModeBanner";
 
 interface Message extends ChatMessage {
   isLoading?: boolean;
@@ -30,6 +31,10 @@ export default function ChatContent() {
   const [error, setError] = useState<string | null>(null);
   const [showNotification, setShowNotification] = useState(false);
   const [lastTaskCreated, setLastTaskCreated] = useState<any>(null);
+  // Latest service_mode reported by the backend; drives the degradation banner.
+  const [serviceMode, setServiceMode] = useState<ServiceMode | undefined>(
+    undefined,
+  );
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load conversation history on component mount
@@ -105,14 +110,21 @@ export default function ChatContent() {
     try {
       const response = await chatApi.sendMessage(userMessage, sessionId);
 
+      // P1A.11: capture service_mode for the banner. Default to FULL when
+      // the backend (older versions) didn't include the field.
+      setServiceMode(response.service_mode ?? "FULL");
+
       // Remove loading message
       setMessages((prev) => prev.filter((msg) => msg.id !== loadingMsgId));
 
-      // Add agent response
+      // Add agent response.
+      // In degraded modes the backend may return agent_message_id=null
+      // (the message wasn't persisted); synthesize a client-side id so the
+      // React key stays unique and the row still renders.
       setMessages((prev) => [
         ...prev,
         {
-          id: response.agent_message_id,
+          id: response.agent_message_id ?? `local-${Date.now()}`,
           role: "agent" as const,
           message: response.agent_response,
           timestamp: response.timestamp,
@@ -120,7 +132,7 @@ export default function ChatContent() {
         },
       ]);
 
-      // Show notification if task was created
+      // Show notification if task was created (only happens in FULL mode)
       if (response.task_created) {
         setLastTaskCreated(response.task_created);
         setShowNotification(true);
@@ -183,6 +195,9 @@ export default function ChatContent() {
           feature.
         </p>
       </div>
+
+      {/* P1A.11: degradation banner; hidden when mode === FULL */}
+      <ServiceModeBanner mode={serviceMode} />
 
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4">

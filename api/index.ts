@@ -193,6 +193,10 @@ export interface ChatMessage {
   task_id?: string;
 }
 
+// P1A.10/.11: backend stamps service_mode on every chat response so the
+// frontend can show a degradation banner when things aren't fully healthy.
+export type ServiceMode = "FULL" | "NO_TOOLS" | "READ_ONLY" | "OFFLINE";
+
 export interface ChatResponse {
   agent_response: string;
   gap_detected: boolean;
@@ -201,11 +205,17 @@ export interface ChatResponse {
     title: string;
     status: string;
     created_at: string;
-  };
+  } | null;
   session_id: string;
-  user_message_id: string;
-  agent_message_id: string;
+  user_message_id: string | null;
+  agent_message_id: string | null;
   timestamp: string;
+  // P1A.11: degradation signals
+  service_mode?: ServiceMode;
+  // Optional flags the backend includes in degraded responses
+  timed_out?: boolean;
+  persisted?: boolean;
+  error_type?: string;
 }
 
 export interface ChatHistoryResponse {
@@ -383,5 +393,97 @@ export const adminApi = {
       params: { ...(status && { status }), ...(limit && { limit }) },
     });
     return response.data;
+  },
+
+  // P3.8: stuck-tasks surface — escalated or stalled-in-progress tasks
+  getStuckTasks: async (limit: number = 100): Promise<{
+    count: number;
+    tasks: Array<{
+      task_id: string;
+      title: string;
+      status: string;
+      escalation_reason?: string | null;
+      updated_at: string;
+      last_failure: {
+        action: string;
+        error: string;
+        at: string;
+      } | null;
+    }>;
+  }> => {
+    const response = await apiClient.get<any>("/api/admin/stuck-tasks", {
+      params: { limit },
+    });
+    return response.data;
+  },
+
+  // P4.7: dead-letter queue surface — Celery tasks that exhausted retries
+  getDeadLetterQueue: async (limit: number = 100): Promise<{
+    count: number;
+    items: Array<{
+      id: string;
+      task_name: string;
+      error: string;
+      details: Record<string, unknown>;
+      captured_at: string;
+    }>;
+  }> => {
+    const response = await apiClient.get<any>("/api/admin/dlq", {
+      params: { limit },
+    });
+    return response.data;
+  },
+};
+
+// Tool Executor admin API (different base URL — port 8001)
+// Doesn't go through the chat API; talks directly to the executor.
+const TOOL_EXECUTOR_BASE =
+  process.env.NEXT_PUBLIC_TOOL_EXECUTOR_URL ?? "http://localhost:8001";
+
+export interface ExecutorTool {
+  name: string;
+  tool_dir: string;
+  quarantined: boolean;
+  manifest: Record<string, unknown> | { error: string };
+}
+
+export const toolExecutorAdminApi = {
+  listTools: async (): Promise<{ tools: ExecutorTool[] }> => {
+    // Use fetch directly so we don't get caught by chat-API axios interceptors.
+    const r = await fetch(`${TOOL_EXECUTOR_BASE}/tools`, {
+      credentials: "omit",
+    });
+    if (!r.ok) throw new Error(`Tool Executor /tools failed: HTTP ${r.status}`);
+    return r.json();
+  },
+
+  disable: async (toolName: string): Promise<{ quarantined: string }> => {
+    const r = await fetch(
+      `${TOOL_EXECUTOR_BASE}/tools/${encodeURIComponent(toolName)}/disable`,
+      { method: "POST", credentials: "omit" },
+    );
+    if (!r.ok) throw new Error(`disable failed: HTTP ${r.status}`);
+    return r.json();
+  },
+
+  enable: async (toolName: string): Promise<{ unquarantined: string }> => {
+    const r = await fetch(
+      `${TOOL_EXECUTOR_BASE}/tools/${encodeURIComponent(toolName)}/enable`,
+      { method: "POST", credentials: "omit" },
+    );
+    if (!r.ok) throw new Error(`enable failed: HTTP ${r.status}`);
+    return r.json();
+  },
+
+  health: async (): Promise<{
+    status: string;
+    tools_discovered: number;
+    quarantined: string[];
+  }> => {
+    const r = await fetch(`${TOOL_EXECUTOR_BASE}/health`, {
+      credentials: "omit",
+    });
+    if (!r.ok) throw new Error(`health failed: HTTP ${r.status}`);
+    return r.json();
   },
 };
